@@ -18,7 +18,7 @@ p1-up:
 p1-join:
 	@echo "Join of P1 worker"
 	$(eval TOKEN=$(shell cd $(P1_DIR) && vagrant ssh $(P1_SERVER) -c "sudo cat /var/lib/rancher/k3s/server/node-token" | tr -d '\r'))
-	cd $(P1_DIR) && vagrant ssh $(P1_WORKER) -c "sudo bash /vagrant/scripts/worker.sh $(TOKEN)"
+	cd $(P1_DIR) && vagrant ssh $(P1_WORKER) -c "sudo bash /vagrant/scripts/install_serverworker.sh $(TOKEN)"
 
 p1-status:
 	@echo "Node status"
@@ -26,3 +26,4 @@ p1-status:
 
 p1-clean:
 	cd $(P1_DIR) && vagrant destroy -f
+	rm -rf $(P1_DIR)/.vagrant
