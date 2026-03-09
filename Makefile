@@ -5,9 +5,11 @@ P3_DIR = p3
 P1_SERVER = pjurdanaS
 P1_WORKER = pjurdanaSW
 
-.PHONY: p1 p1-up p1-join p1-clean
+P2_SERVER = pjurdanaS
 
-# P1 part
+
+.PHONY: p1 p1-up p1-join p1-status p1-clean \
+		p2 p2-up p2-status p2-clean p2-hosts
 
 p1: p1-up p1-join p1-status
 
@@ -27,3 +29,39 @@ p1-status:
 p1-clean:
 	cd $(P1_DIR) && vagrant destroy -f
 	rm -rf $(P1_DIR)/.vagrant
+
+p2: p2-up p2-hosts p2-status
+
+p2-up:
+	@echo "P2 launch."
+	cd $(P2_DIR) && vagrant up
+
+p2-hosts:
+	@echo "Configuration of /etc/hosts on the host"
+	@echo "192.168.56.110 app1.com app2.com app3.com" | sudo tee -a /etc/hosts
+
+p2-status:
+	@echo "Node status"
+	@echo "\n--- NODES ---"
+	cd $(P2_DIR) && vagrant ssh $(P2_SERVER) -c "kubectl get nodes -o wide"
+	
+	@echo "\n--- DEPLOYMENTS ---"
+	cd $(P2_DIR) && vagrant ssh $(P2_SERVER) -c "kubectl get deployments"
+
+	@echo "\n--- PODS ---"
+	cd $(P2_DIR) && vagrant ssh $(P2_SERVER) -c "kubectl get pods -o wide"
+
+	@echo "\n--- SERVICES ---"
+	cd $(P2_DIR) && vagrant ssh $(P2_SERVER) -c "kubectl get services"
+
+	@echo "\n--- INGRESS ---"
+	cd $(P2_DIR) && vagrant ssh $(P2_SERVER) -c "kubectl get ingress"
+
+p2-clean:
+	cd $(P2_DIR) && vagrant destroy -f
+	rm -rf $(P2_DIR)/.vagrant
+	@echo "hosts suppression"
+	@sudo sed -i '/192.168.56.110 app1.com/d' /etc/hosts
+
+
+
