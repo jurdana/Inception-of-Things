@@ -7,9 +7,12 @@ P1_WORKER = pjurdanaSW
 
 P2_SERVER = pjurdanaS
 
+P3_NAME = p3-cluster
+
 
 .PHONY: p1 p1-up p1-join p1-status p1-clean \
-		p2 p2-up p2-status p2-clean p2-hosts
+		p2 p2-up p2-status p2-clean p2-hosts \
+		p3
 
 p1: p1-up p1-join p1-status
 
@@ -29,6 +32,8 @@ p1-status:
 p1-clean:
 	cd $(P1_DIR) && vagrant destroy -f
 	rm -rf $(P1_DIR)/.vagrant
+
+# ______________________________________________________________________________________________________________________________________________________________________________________________________________________
 
 p2: p2-up p2-hosts p2-status
 
@@ -63,5 +68,24 @@ p2-clean:
 	@echo "hosts suppression"
 	@sudo sed -i '/192.168.56.110 app1.com/d' /etc/hosts
 
+# ______________________________________________________________________________________________________________________________________________________________________________________________________________________
 
+p3:
+	@echo "P3 launch"
+	k3d cluster create $(P3_NAME) --api-port 6443 -p "8888:30008@agent:0" --agent 2
 
+	kubectl create namespace argocd
+	kubectl create namespace dev
+
+	kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+	@echo "Waiting argoCD ready status"
+	kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s
+	@echo "ArgoCD installed, Use 'make p3-pass' to get the admin pass"
+
+p3-clean:
+	k3d cluster delete $(P3_NAME)
+
+p3-pass:
+	@echo "The admin pass for argoCD is:"
+	kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
