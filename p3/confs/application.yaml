@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/zomioz/Inception-Of-Things.git
+    repoURL: https://github.com/zomioz/Inception-Of-Things
     targetRevision: p3-gitops
     path: p3/deployment
   destination:
@@ -17,4 +17,4 @@ spec:
       selfHeal: true
       prune: true
     syncOptions:
-      - CreateNamespace=true
+    - CreateNamespace=true
