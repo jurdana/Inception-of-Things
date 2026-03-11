@@ -8,6 +8,7 @@ P1_WORKER = pjurdanaSW
 P2_SERVER = pjurdanaS
 
 P3_NAME = p3-cluster
+SCRIPTS_PATH = ./p3/scripts
 
 
 .PHONY: p1 p1-up p1-join p1-status p1-clean \
@@ -70,21 +71,23 @@ p2-clean:
 
 # ______________________________________________________________________________________________________________________________________________________________________________________________________________________
 
-p3:
-	@echo "P3 launch"
-	k3d cluster create $(P3_NAME) --api-port 6443 -p "8888:30008@agent:0" --agent 2
 
-	kubectl create namespace argocd
-	kubectl create namespace dev
+p3-install:
+	@chmod +x $(SCRIPTS_PATH)/tools.sh
+	@bash $(SCRIPTS_PATH)/tools.sh
 
-	kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
-	@echo "Waiting argoCD ready status"
-	kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s
-	@echo "ArgoCD installed, Use 'make p3-pass' to get the admin pass"
+p3-setup:
+	@chmod +x $(SCRIPTS_PATH)/setup.sh
+	@bash $(SCRIPTS_PATH)/setup.sh
 
 p3-clean:
-	k3d cluster delete $(P3_NAME)
+	@chmod +x $(SCRIPTS_PATH)/clean.sh
+	@bash $(SCRIPTS_PATH)/clean.sh
+
+p3-fclean: p3-clean
+	@chmod +x $(SCRIPTS_PATH)/total_uninstall.sh
+	@bash $(SCRIPTS_PATH)/total_uninstall.sh
+
 
 p3-pass:
 	@echo "The admin pass for argoCD is:"
