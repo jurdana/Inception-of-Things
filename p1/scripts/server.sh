@@ -65,16 +65,33 @@ done
 # Disable firewalld if present: it blocks K3s ports (6443/tcp, 8472/udp, 10250/tcp)
 systemctl disable --now firewalld 2>/dev/null || true
 
+# Files downloaded once on the host by prepare_host.sh, uploaded by the
+# Vagrantfile. Without them, fall back to the online installer.
+K3S_CACHE=/tmp/k3s-cache
+if [[ -f "${K3S_CACHE}/k3s" ]]; then
+    echo "[+] Using pre-downloaded K3s $(cat "${K3S_CACHE}/version")"
+    install -m 755 "${K3S_CACHE}/k3s" /usr/local/bin/k3s
+    # System images (coredns, traefik...) imported at startup instead of pulled
+    install -D -m 644 "${K3S_CACHE}/k3s-airgap-images-amd64.tar.zst" \
+        /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst
+    INSTALL_SH="${K3S_CACHE}/install.sh"
+    # Skip only the binary download: the installer still installs the SELinux
+    # policy RPM and labels the binary (chcon container_runtime_exec_t)
+    export INSTALL_K3S_SKIP_DOWNLOAD=binary
+else
+    curl -sSfL https://get.k3s.io -o /tmp/k3s-install.sh
+    INSTALL_SH=/tmp/k3s-install.sh
+fi
+
 echo "[+] Installing K3s server"
 # Official installer:
 #   server                       -> controller (control plane)
 #   --node-ip                    -> IP announced to the cluster (not the NAT one)
 #   --flannel-iface              -> pod network (VXLAN) through the private interface
 #   --write-kubeconfig-mode=644  -> kubectl usable by the vagrant user without sudo
-curl -sSfL https://get.k3s.io | \
-    K3S_TOKEN="${K3S_TOKEN}" \
+K3S_TOKEN="${K3S_TOKEN}" \
     INSTALL_K3S_EXEC="server --node-ip=${NODE_IP} --flannel-iface=${IFACE} --write-kubeconfig-mode=644" \
-    sh -
+    sh "${INSTALL_SH}"
 
 # Kubernetes stores node names in lowercase (pjurdanaS -> pjurdanas)
 NODE="$(hostname | tr '[:upper:]' '[:lower:]')"
