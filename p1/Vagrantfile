@@ -1,25 +1,81 @@
+# Ruby standard libraries used to generate and store the shared K3s token
+require "securerandom"   # cryptographically secure random generator
+require "fileutils"      # filesystem helpers (mkdir -p equivalent)
+
+# --- Box ---------------------------------------------------------------------
+BOX_NAME = "fedora44"
+# Official Fedora 44 Cloud Base VirtualBox box, published on the Fedora mirror itself
+# (not on the HashiCorp registry). Check for a newer release before each defense.
+BOX_URL  = "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-44-1.7.x86_64.vagrant.virtualbox.box"
+
+# --- Machines ----------------------------------------------------------------
+# Names imposed by the subject: <login>S for the server, <login>SW for the worker
+SERVER_NAME = "pjurdanaS"
+SERVER_IP   = "192.168.56.110"   # IP imposed by the subject for the server
+WORKER_NAME = "pjurdanaSW"
+WORKER_IP   = "192.168.56.111"   # IP imposed by the subject for the worker
+
+HOST_GATEWAY = "192.168.56.1"   # host side of the private network (routes VMs to the internet)
+
+# --- Shared K3s token --------------------------------------------------------
+# K3s agents need a secret token to join the server. Instead of reading it from
+# the server after install (which required an extra Makefile step), we generate
+# it here and give the same value to both machines.
+# Path of the file holding the token, inside p1/.vagrant (deleted by p1-clean)
+token_file = File.join(__dir__, ".vagrant", "k3s_token")
+# Make sure p1/.vagrant exists (it does not on the very first run)
+FileUtils.mkdir_p(File.dirname(token_file))
+# Generate a 64-char hex token only if none exists yet, so that every vagrant
+# command (up, provision, ssh...) reuses the same token for the same cluster
+File.write(token_file, SecureRandom.hex(32)) unless File.exist?(token_file)
+# Load the token (strip removes a possible trailing newline)
+K3S_TOKEN = File.read(token_file).strip
+
+# Vagrant configuration, format version 2 (current format)
 Vagrant.configure("2") do |config|
-    config.vm.box = "debian/bookworm64"
+  # --- Settings shared by both machines ---
+  config.vm.box              = BOX_NAME   # box to use
+  config.vm.box_url          = BOX_URL    # where to download it if not cached
+  config.vm.box_check_update = false      # no update check on each `vagrant up`
+  # Disable the /vagrant shared folder: scripts are uploaded by the provisioner
+  # (path: ...), so sharing is not needed and avoids guest additions issues
+  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-# MASTER
-    config.vm.define "pjurdanaS" do |server|
-        server.vm.hostname = "pjurdanaS"
-        server.vm.network "private_network", ip: "192.168.56.110"
+  # VirtualBox settings applied to both machines
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus         = 1      # minimum recommended by the subject
+    vb.memory       = 1024   # MB; 512 is too tight for the K3s control plane
+    vb.linked_clone = true   # VMs share the box disk instead of a full copy
+  end
 
-        server.vm.provider "virtualbox" do |vb|
-            vb.memory = "2048"
-            vb.cpus = 2
-        end
-        server.vm.provision "shell", path: "scripts/install_server.sh"
+  # --- Server: K3s controller ---
+  config.vm.define SERVER_NAME do |server|
+    server.vm.hostname = SERVER_NAME   # hostname inside the VM
+    # Dedicated host-only interface with the fixed IP required by the subject
+    server.vm.network "private_network", ip: SERVER_IP
+    server.vm.provider "virtualbox" do |vb|
+      vb.name = SERVER_NAME   # VM name in VirtualBox (modern equivalent of
+                              # v.customize ["modifyvm", :id, "--name", ...])
+      vb.cpus   = 2      # K3s server minimum (control plane)
+      vb.memory = 2048   # K3s server minimum; 1 GB swaps and stalls the API
     end
-# WORKER
-    config.vm.define "pjurdanaSW" do |worker|
-        worker.vm.hostname = "pjurdanaSW"
-        worker.vm.network "private_network", ip: "192.168.56.111"
+    # Run scripts/server.sh as root on first `vagrant up`,
+    # with these environment variables available inside the script
+    server.vm.provision "shell", path: "scripts/server.sh",
+      env: { "NODE_IP" => SERVER_IP, "GATEWAY" => HOST_GATEWAY, "K3S_TOKEN" => K3S_TOKEN }
+  end
 
-        worker.vm.provider "virtualbox" do |vb|
-            vb.memory = "2048"
-            vb.cpus = 2
-        end
+  # --- Worker: K3s agent ---
+  # Defined after the server: with VirtualBox, Vagrant brings machines up one
+  # after the other, so the server is installed before the agent tries to join
+  config.vm.define WORKER_NAME do |worker|
+    worker.vm.hostname = WORKER_NAME
+    worker.vm.network "private_network", ip: WORKER_IP
+    worker.vm.provider "virtualbox" do |vb|
+      vb.name = WORKER_NAME
     end
+    # The agent also needs the server IP to know which API to join
+    worker.vm.provision "shell", path: "scripts/agent.sh",
+      env: { "NODE_IP" => WORKER_IP, "SERVER_IP" => SERVER_IP, "GATEWAY" => HOST_GATEWAY, "K3S_TOKEN" => K3S_TOKEN }
+  end
 end
