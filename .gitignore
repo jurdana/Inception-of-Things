@@ -1,0 +1,20 @@
+# Vagrant: VM state, generated SSH keys, K3s shared token
+.vagrant/
+
+# Vagrant boxes (large binaries, downloaded or built locally)
+*.box
+
+# Logs
+*.log
+
+# Local secrets / kubeconfigs exported from clusters
+.env
+*.kubeconfig
+kubeconfig*
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
