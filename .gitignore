@@ -21,3 +21,6 @@ kubeconfig*
 
 # Local test scripts (not part of the submission)
 test_*.sh
+
+iot-correction.pdf
+iot-subject.pdf
