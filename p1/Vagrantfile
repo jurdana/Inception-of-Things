@@ -3,6 +3,7 @@ require "securerandom"   # cryptographically secure random generator
 require "fileutils"      # filesystem helpers (mkdir -p equivalent)
 
 # --- Box ---------------------------------------------------------------------
+# Local name under which Vagrant caches the box (~/.vagrant.d/boxes/fedora44)
 BOX_NAME = "fedora44"
 # Official Fedora 44 Cloud Base VirtualBox box, published on the Fedora mirror itself
 # (not on the HashiCorp registry). Check for a newer release before each defense.
@@ -43,9 +44,17 @@ Vagrant.configure("2") do |config|
 
   # VirtualBox settings applied to both machines
   config.vm.provider "virtualbox" do |vb|
-    vb.cpus         = 1      # minimum recommended by the subject
-    vb.memory       = 1024   # MB; 512 is too tight for the K3s control plane
+    # The subject recommends 1 CPU / 512-1024 MB, but under nested virtualization
+    # 1 vCPU starves kubelet (node flaps NotReady) and the K3s server needs
+    # 2 CPU / 2 GB (K3s documented server minimum)
+    vb.cpus         = 2
+    vb.memory       = 2048   # MB
     vb.linked_clone = true   # VMs share the box disk instead of a full copy
+    # The Fedora box ships with the "Legacy" paravirt provider (= none): the
+    # guest kernel then runs as on bare metal (no PV spinlocks, IPIs, TLB flush)
+    # and every such operation traps to the hypervisor, which is very costly
+    # under nested virtualization. KVM is the native interface of the Linux kernel.
+    vb.customize ["modifyvm", :id, "--paravirt-provider", "kvm"]
   end
 
   # --- Server: K3s controller ---
@@ -56,8 +65,6 @@ Vagrant.configure("2") do |config|
     server.vm.provider "virtualbox" do |vb|
       vb.name = SERVER_NAME   # VM name in VirtualBox (modern equivalent of
                               # v.customize ["modifyvm", :id, "--name", ...])
-      vb.cpus   = 2      # K3s server minimum (control plane)
-      vb.memory = 2048   # K3s server minimum; 1 GB swaps and stalls the API
     end
     # Run scripts/server.sh as root on first `vagrant up`,
     # with these environment variables available inside the script
