@@ -1,0 +1,88 @@
+TESTS P1 / P2 - a faire sur la VM 42 (Linux)
+=============================================
+
+0. Avant de commencer
+---------------------
+git pull                                   # recuperer les commits
+vagrant --version && VBoxManage --version  # outils presents
+VBoxManage list vms                        # aucune VM pjurdanaS / pjurdanaSW qui traine
+                                           # sinon : make p1-clean / make p2-clean
+# Fedora 45 est-elle sortie ? Si oui, mettre a jour BOX_URL partout
+# (p1/Vagrantfile, p2/Vagrantfile, prepare_host.sh)
+curl -sI https://dl.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/ | head -1
+
+1. Preparation (une seule fois)
+-------------------------------
+make prepare
+# attendu : box fedora44 ajoutee + "K3s v1.xx.y+k3s1 cached in ~/.cache/iot/k3s"
+vagrant box list                           # fedora44 (virtualbox, 0)
+ls -lh ~/.cache/iot/k3s                    # k3s, k3s-airgap-images-amd64.tar.zst, install.sh, version
+make prepare                               # 2e lancement : doit tout sauter ("already")
+
+2. P1
+-----
+time make p1
+# dans les logs : "[+] Using pre-downloaded K3s ..." sur les 2 VMs
+# a la fin : 2 nodes Ready (pjurdanas control-plane, pjurdanasw)
+
+cd p1
+vagrant ssh pjurdanaS
+    hostname                                               # pjurdanaS
+    ip a show $(ip route | grep default | awk '{print $5}') # commande de la correction : doit montrer 192.168.56.110
+    ip route                                               # une seule route default, via 192.168.56.1
+    kubectl get nodes -o wide                              # 2 nodes Ready, INTERNAL-IP .110 / .111
+    exit
+vagrant ssh pjurdanaSW
+    hostname                                               # pjurdanaSW
+    ip a show $(ip route | grep default | awk '{print $5}') # 192.168.56.111
+    systemctl status k3s-agent --no-pager                  # active (running)
+    exit
+cd ..
+# lancer le testeur ici
+
+make p1-clean
+
+3. P2
+-----
+time make p2
+# dans les logs : "[+] Using pre-downloaded K3s ..." puis "[+] Apps deployed"
+
+curl -H "Host: app1.com" 192.168.56.110    # app1 (page nginx)
+curl -H "Host: app2.com" 192.168.56.110    # app2 (nginxdemos/hello, change de pod en relancant)
+curl -H "Host: app3.com" 192.168.56.110    # app3 (httpd "It works!")
+curl 192.168.56.110                        # app3 aussi (backend par defaut)
+curl -H "Host: nimporte.com" 192.168.56.110  # app3 aussi
+curl app1.com                              # via /etc/hosts
+
+cd p2
+vagrant ssh pjurdanaS
+    hostname                                               # pjurdanaS
+    ip a show $(ip route | grep default | awk '{print $5}') # 192.168.56.110
+    kubectl get nodes -o wide
+    kubectl get all                                        # app2 avec 3 replicas
+    kubectl get ingress
+    exit
+cd ..
+
+make p2-clean
+grep app1.com /etc/hosts                   # doit etre vide
+
+4. Si ca casse
+--------------
+# Pas d'internet dans la VM ("no internet through 192.168.56.1") :
+make net
+sudo nft list table ip iot_nat
+sudo iptables -L DOCKER-USER -n            # si Docker est installe : 2 regles ACCEPT 192.168.56.0/24
+
+# K3s ne demarre pas (dans la VM) :
+sudo journalctl -u k3s --no-pager | tail -50       # (k3s-agent sur le worker)
+sudo ausearch -m avc -ts recent                    # refus SELinux
+ls -Z /usr/local/bin/k3s                           # doit etre container_runtime_exec_t
+
+# Comparer sans le cache (installation en ligne) :
+mv ~/.cache/iot/k3s ~/.cache/iot/k3s.off && make p1 ; mv ~/.cache/iot/k3s.off ~/.cache/iot/k3s
+
+5. A noter pour me redonner
+---------------------------
+- duree de make p1 et make p2 (sortie de time)
+- toute erreur avec les ~30 lignes de log autour
