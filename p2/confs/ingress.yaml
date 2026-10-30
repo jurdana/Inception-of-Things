@@ -36,3 +36,13 @@ spec:
             name: app3-service
             port:
               number: 80
+  # No host: any other HOST (or the bare IP) falls back to app3
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app3-service
+            port:
+              number: 80
