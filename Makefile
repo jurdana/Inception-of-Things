@@ -10,25 +10,33 @@ P2_SERVER = pjurdanaS
 P3_NAME = p3-cluster
 SCRIPTS_PATH = ./p3/scripts
 
+NET_CIDR  = 192.168.56.0/24
+NFT_TABLE = iot_nat
 
-.PHONY: p1 p1-up p1-join p1-status p1-clean \
+.PHONY: net net-clean \
+		p1 p1-status p1-clean \
 		p2 p2-up p2-status p2-clean p2-hosts \
-		p3
+		p3-install p3-setup p3-clean p3-fclean p3-pass
 
-p1: p1-up p1-join p1-status
+# Host routes the private network (192.168.56.0/24) to the internet:
+# VMs use 192.168.56.1 (this host) as default gateway.
+net:
+	sudo sysctl -qw net.ipv4.ip_forward=1
+	sudo nft delete table ip $(NFT_TABLE) 2>/dev/null || true
+	sudo nft add table ip $(NFT_TABLE)
+	sudo nft add chain ip $(NFT_TABLE) postrouting '{ type nat hook postrouting priority srcnat; policy accept; }'
+	sudo nft add rule ip $(NFT_TABLE) postrouting ip saddr $(NET_CIDR) ip daddr != $(NET_CIDR) masquerade
 
-p1-up:
-	@echo "P1 launch."
+net-clean:
+	sudo nft delete table ip $(NFT_TABLE) 2>/dev/null || true
+	sudo sysctl -qw net.ipv4.ip_forward=0
+
+p1: net
 	cd $(P1_DIR) && vagrant up
-
-p1-join:
-	@echo "Join of P1 worker"
-	$(eval TOKEN=$(shell cd $(P1_DIR) && vagrant ssh $(P1_SERVER) -c "sudo cat /var/lib/rancher/k3s/server/node-token" | tr -d '\r'))
-	cd $(P1_DIR) && vagrant ssh $(P1_WORKER) -c "sudo bash /vagrant/scripts/install_serverworker.sh $(TOKEN)"
+	cd $(P1_DIR) && vagrant ssh $(P1_SERVER) -c "kubectl get nodes -o wide"
 
 p1-status:
-	@echo "Node status"
-	cd $(P1_DIR) && vagrant ssh $(P1_SERVER) -c "sudo kubectl get nodes"
+	cd $(P1_DIR) && vagrant ssh $(P1_SERVER) -c "kubectl get nodes -o wide"
 
 p1-clean:
 	cd $(P1_DIR) && vagrant destroy -f
