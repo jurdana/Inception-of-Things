@@ -64,6 +64,20 @@ for i in $(seq 1 60); do
     sleep 2
 done
 
+# Same cache logic as server.sh: files from prepare_host.sh, else online installer
+K3S_CACHE=/tmp/k3s-cache
+if [[ -f "${K3S_CACHE}/k3s" ]]; then
+    echo "[+] Using pre-downloaded K3s $(cat "${K3S_CACHE}/version")"
+    install -m 755 "${K3S_CACHE}/k3s" /usr/local/bin/k3s
+    install -D -m 644 "${K3S_CACHE}/k3s-airgap-images-amd64.tar.zst" \
+        /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst
+    INSTALL_SH="${K3S_CACHE}/install.sh"
+    export INSTALL_K3S_SKIP_DOWNLOAD=binary
+else
+    curl -sSfL https://get.k3s.io -o /tmp/k3s-install.sh
+    INSTALL_SH=/tmp/k3s-install.sh
+fi
+
 echo "[+] Installing K3s agent"
 # Official installer in agent mode:
 #   K3S_URL         -> server API address (switches the installer to agent mode)
@@ -71,10 +85,9 @@ echo "[+] Installing K3s agent"
 #   agent           -> worker (kubelet + pods, no control plane)
 #   --node-ip       -> announce the private IP instead of the NAT one
 #   --flannel-iface -> pod traffic through the private interface
-curl -sSfL https://get.k3s.io | \
-    K3S_URL="https://${SERVER_IP}:6443" \
+K3S_URL="https://${SERVER_IP}:6443" \
     K3S_TOKEN="${K3S_TOKEN}" \
     INSTALL_K3S_EXEC="agent --node-ip=${NODE_IP} --flannel-iface=${IFACE}" \
-    sh -
+    sh "${INSTALL_SH}"
 
 echo "[+] K3s agent joined ${SERVER_IP}"
