@@ -1,14 +1,52 @@
+# --- Box ---------------------------------------------------------------------
+# Same box as p1: Vagrant reuses the cached copy, so no second download
+BOX_NAME = "fedora44"
+# Official Fedora 44 Cloud Base VirtualBox box, published on the Fedora mirror itself
+# (not on the HashiCorp registry). Check for a newer release before each defense.
+BOX_URL  = "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-44-1.7.x86_64.vagrant.virtualbox.box"
+
+# --- Machine -----------------------------------------------------------------
+# Name imposed by the subject: <login>S
+SERVER_NAME = "pjurdanaS"
+SERVER_IP   = "192.168.56.110"   # IP imposed by the subject
+
+HOST_GATEWAY = "192.168.56.1"   # host side of the private network (routes VMs to the internet)
+
+# K3s binary, installer and airgap images downloaded once by prepare_host.sh
+K3S_CACHE = File.expand_path("~/.cache/iot/k3s")
+
+# Vagrant configuration, format version 2 (current format)
 Vagrant.configure("2") do |config|
-    config.vm.box = "debian/bookworm64"
+  config.vm.box              = BOX_NAME
+  config.vm.box_url          = BOX_URL
+  config.vm.box_check_update = false
+  # The Fedora box has no guest additions: no /vagrant shared folder, the
+  # manifests are uploaded by the file provisioner below instead
+  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-    config.vm.define "pjurdanaS" do |server|
-        server.vm.hostname = "pjurdanaS"
-        server.vm.network "private_network", ip: "192.168.56.110"
-
-        server.vm.provider "virtualbox" do |vb|
-            vb.memory = "2048"
-            vb.cpus = 2
-        end
-        server.vm.provision "shell", path: "scripts/install_server.sh"
+  config.vm.define SERVER_NAME do |server|
+    server.vm.hostname = SERVER_NAME
+    # Dedicated host-only interface with the fixed IP required by the subject
+    server.vm.network "private_network", ip: SERVER_IP
+    server.vm.provider "virtualbox" do |vb|
+      vb.name   = SERVER_NAME
+      # Same sizing as p1: the K3s server needs 2 CPU / 2 GB under nested
+      # virtualization (1 vCPU starves kubelet)
+      vb.cpus   = 2
+      vb.memory = 2048   # MB
+      vb.linked_clone = true   # clone the box disk instead of a full copy
+      # Fedora box ships with the "Legacy" paravirt provider: KVM avoids trapping
+      # to the hypervisor on every spinlock / IPI / TLB flush (see p1)
+      vb.customize ["modifyvm", :id, "--paravirt-provider", "kvm"]
     end
+    # Upload the K3s cache (without it, the script downloads K3s online)
+    if File.exist?(File.join(K3S_CACHE, "k3s"))
+      server.vm.provision "file", source: K3S_CACHE, destination: "/tmp/k3s-cache"
+    end
+    # Upload the Kubernetes manifests (deployments, services, ingress)
+    server.vm.provision "file", source: "confs", destination: "/tmp/p2-confs"
+    # Then install K3s and apply them, as root
+    server.vm.provision "shell", path: "scripts/install_server.sh",
+      env: { "NODE_IP" => SERVER_IP, "GATEWAY" => HOST_GATEWAY, "CONFS_DIR" => "/tmp/p2-confs" }
+  end
 end
