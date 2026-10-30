@@ -32,6 +32,10 @@ File.write(token_file, SecureRandom.hex(32)) unless File.exist?(token_file)
 # Load the token (strip removes a possible trailing newline)
 K3S_TOKEN = File.read(token_file).strip
 
+# --- K3s cache ---------------------------------------------------------------
+# K3s binary, installer and airgap images downloaded once by prepare_host.sh
+K3S_CACHE = File.expand_path("~/.cache/iot/k3s")
+
 # Vagrant configuration, format version 2 (current format)
 Vagrant.configure("2") do |config|
   # --- Settings shared by both machines ---
@@ -41,6 +45,11 @@ Vagrant.configure("2") do |config|
   # Disable the /vagrant shared folder: scripts are uploaded by the provisioner
   # (path: ...), so sharing is not needed and avoids guest additions issues
   config.vm.synced_folder ".", "/vagrant", disabled: true
+  # Upload the K3s cache to each VM (runs before the machine provisioners).
+  # Without it, the scripts fall back to downloading K3s from the internet.
+  if File.exist?(File.join(K3S_CACHE, "k3s"))
+    config.vm.provision "file", source: K3S_CACHE, destination: "/tmp/k3s-cache"
+  end
 
   # VirtualBox settings applied to both machines
   config.vm.provider "virtualbox" do |vb|
