@@ -65,7 +65,7 @@ done
 # Disable firewalld if present: it blocks K3s ports (6443/tcp, 8472/udp, 10250/tcp)
 systemctl disable --now firewalld 2>/dev/null || true
 
-# Files downloaded once on the host by prepare_host.sh, uploaded by the
+# Files pre-downloaded on the host (optional), uploaded by the
 # Vagrantfile. Without them, fall back to the online installer.
 K3S_CACHE=/tmp/k3s-cache
 if [[ -f "${K3S_CACHE}/k3s" ]]; then
