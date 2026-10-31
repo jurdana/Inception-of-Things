@@ -91,4 +91,14 @@ echo "[+] Deploying app1, app2, app3 and the ingress"
 # Instead of a fixed sleep: wait until every deployment has its replicas up
 "${KUBECTL}" wait --for=condition=Available deployment --all --timeout=300s
 
+# Traefik is installed by a helm job that often fails once before succeeding,
+# then svclb must open port 80: wait for a real HTTP answer through the ingress
+echo "[+] Waiting for Traefik to serve the ingress on ${NODE_IP}:80"
+for _ in $(seq 1 90); do
+    [ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' -H 'Host: app1.com' "http://${NODE_IP}")" = "200" ] && break
+    sleep 2
+done
+[ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' -H 'Host: app1.com' "http://${NODE_IP}")" = "200" ] \
+    || { echo "[-] Ingress not answering after 180s" >&2; exit 1; }
+
 echo "[+] Apps deployed on ${NODE_IP}"
