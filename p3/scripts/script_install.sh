@@ -23,8 +23,9 @@ sudo apt install -y docker.io
 
 # __________________Update /etc/hots for P3
 echo -e  '\033[0;32m' "Updating /etc/hosts..." '\033[1;37m'
-echo "127.0.0.1 argocd.local"  | sudo tee -a /etc/hosts
-echo "127.0.0.1 wil42.local"   | sudo tee -a /etc/hosts
+# Only add each entry once, so a second install does not duplicate it
+grep -q "argocd\.local" /etc/hosts || echo "127.0.0.1 argocd.local" | sudo tee -a /etc/hosts
+grep -q "wil42\.local" /etc/hosts  || echo "127.0.0.1 wil42.local"  | sudo tee -a /etc/hosts
 
 
 # __________________Enable & start of docker
@@ -50,7 +51,9 @@ sg docker -c "k3d cluster create mycluster -p \"80:80@loadbalancer\" -p \"443:44
 # __________________Installation of ArgoCD
 echo -e '\033[0;32m' "Installing ArgoCD..." '\033[1;37m'
 kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# --server-side: the ApplicationSet CRD is too big for a client-side apply
+# (metadata.annotations: Too long), as in the official Argo CD install doc
+kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 echo -e '\033[0;32m' "Waiting for ArgoCD to be ready..." '\033[1;37m'
 kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd
 
