@@ -64,7 +64,7 @@ for i in $(seq 1 60); do
     sleep 2
 done
 
-# Same cache logic as server.sh: files from prepare_host.sh, else online installer
+# Same cache logic as server.sh: files pre-downloaded on the host, else online installer
 K3S_CACHE=/tmp/k3s-cache
 if [[ -f "${K3S_CACHE}/k3s" ]]; then
     echo "[+] Using pre-downloaded K3s $(cat "${K3S_CACHE}/version")"
