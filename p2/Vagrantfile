@@ -12,7 +12,7 @@ SERVER_IP   = "192.168.56.110"   # IP imposed by the subject
 
 HOST_GATEWAY = "192.168.56.1"   # host side of the private network (routes VMs to the internet)
 
-# K3s binary, installer and airgap images downloaded once by prepare_host.sh
+# K3s binary, installer and airgap images pre-downloaded on the host (optional)
 K3S_CACHE = File.expand_path("~/.cache/iot/k3s")
 
 # Vagrant configuration, format version 2 (current format)
