@@ -1,6 +1,6 @@
 # Déroulement de l'évaluation - P1 et P2
 
-Ce document suit la fiche de correction (`iot-correction.pdf`) dans l'ordre, et donne
+Ce document suit la fiche de correction (`iot-correction.pdf`, version française mise à jour) dans l'ordre, et donne
 pour chaque point : la commande à lancer, le résultat attendu et ce qu'il faut savoir
 expliquer.
 
@@ -32,7 +32,7 @@ Durées constatées : `make p1` ≈ 4 min, `make p2` ≈ 3 min 30.
 |---|---|---|
 | Clone dans un dossier vide | `mkdir /tmp/eval && cd /tmp/eval && git clone <repo> . && ls` | `p1 p2 p3 Makefile ...` |
 | Pas d'alias malveillant | `alias; type vagrant kubectl curl` | pas d'alias, binaires dans `/usr/bin` |
-| VM de 42 | montrer que l'on est sur la VM de 42 | - |
+| Clone sur l'ordinateur du groupe | le correcteur clone sur notre machine | - |
 | Dossiers p1, p2, p3 | `ls p1 p2 p3` | `Vagrantfile` + `scripts/` (p1), `Vagrantfile` + `scripts/` + `confs/` (p2) |
 | Scripts d'aide relus ensemble | ouvrir le `Makefile` | expliquer `net`, `p1`, `p2`, `*-clean` |
 
@@ -48,9 +48,10 @@ Durées constatées : `make p1` ≈ 4 min, `make p2` ≈ 3 min 30.
   son IP + un token. Inclut par défaut Traefik (ingress), CoreDNS, Flannel (réseau
   des pods), un load balancer (`svclb`).
 - **K3d** : K3s dans des conteneurs Docker (pas de VM), pour la P3.
-- **CI / Argo CD** : l'intégration continue construit et teste le code à chaque push ;
-  Argo CD fait du GitOps : il surveille un dépôt Git et applique automatiquement son
-  contenu au cluster (P3).
+- **Déploiement continu / Argo CD** : le déploiement continu met automatiquement en
+  production chaque changement poussé sur le dépôt, sans action manuelle. Argo CD le fait
+  en GitOps : il surveille un dépôt Git et applique automatiquement son contenu au
+  cluster (P3).
 
 ---
 
@@ -77,11 +78,13 @@ Ouvrir `p1/Vagrantfile` avec le correcteur et pointer chaque exigence :
 - **Token partagé** : généré par le `Vagrantfile` (`SecureRandom.hex(32)`), stocké dans
   `p1/.vagrant/k3s_token` et passé aux deux scripts. L'agent en a besoin pour rejoindre
   le server.
-- **Route par défaut via 192.168.56.1** : la commande de la fiche
-  (`ip a show $(ip route | grep default ...)`) affiche l'interface qui porte la route par
-  défaut. Par défaut, Vagrant la met sur l'interface NAT (10.0.2.15). Les scripts la
-  déplacent sur l'interface privée, avec l'hôte comme passerelle ; `make net` fait le
-  NAT sur l'hôte pour que les VMs aient internet. L'interface NAT reste pour `vagrant ssh`.
+- **Deux interfaces réseau** : `enp0s3` (NAT de VirtualBox, 10.0.2.15, utilisée par
+  `vagrant ssh`) et `enp0s8` (interface dédiée, IP du sujet). La fiche demande de montrer
+  l'interface qui a l'IP du sujet avec `ip a` : c'est `enp0s8`.
+- **Route par défaut via 192.168.56.1** : les scripts déplacent aussi la route par défaut
+  sur `enp0s8`, avec l'hôte comme passerelle (`make net` fait le NAT sur l'hôte). Ainsi,
+  même l'ancienne commande de la fiche (`ip a show $(ip route | grep default ...)`), qui
+  affiche l'interface de la route par défaut, montre bien l'IP du sujet.
 - **`--node-ip` et `--flannel-iface`** : forcent K3s à utiliser l'IP privée (sinon il
   annoncerait 10.0.2.15, la même sur les deux VMs).
 - **Cache K3s (optionnel)** : si `~/.cache/iot/k3s` existe sur l'hôte (téléchargé à
@@ -105,15 +108,25 @@ Dans les logs : `[+] Using pre-downloaded K3s ...` sur les 2 VMs, puis à la fin
 
 ```bash
 cd p1
-vagrant ssh pjurdanaS
+vagrant ssh pjurdanaS                                     # aucun mot de passe demandé
 hostname                                                  # pjurdanaS
-ip a show $(ip route | grep default | awk '{print $5}')   # inet 192.168.56.110/24 (enp0s8)
-systemctl status k3s --no-pager                           # active (running)
+ip a                                                      # enp0s8 : inet 192.168.56.110/24
+systemctl status k3s --no-pager                           # active (running) -> mode server
 kubectl get nodes -o wide
 exit
 ```
 
-Sortie attendue :
+Dans `ip a`, montrer au correcteur :
+
+```
+2: enp0s3: ... inet 10.0.2.15/24        <- NAT VirtualBox (sert à vagrant ssh)
+3: enp0s8: ... inet 192.168.56.110/24   <- interface dédiée, IP du sujet
+4: flannel.1 / cni0 / veth...           <- réseau des pods créé par K3s
+```
+
+La fiche précise que les noms prévisibles (`enp0s8`) remplacent `eth0`/`eth1` : c'est normal.
+
+Sortie attendue de `kubectl get nodes -o wide` :
 
 ```
 NAME         STATUS   ROLES           ...   INTERNAL-IP      ...   OS-IMAGE
@@ -133,10 +146,10 @@ pjurdanasw   Ready    <none>          ...   192.168.56.111   ...   Fedora Linux 
 ### Worker
 
 ```bash
-vagrant ssh pjurdanaSW
+vagrant ssh pjurdanaSW                                    # aucun mot de passe demandé
 hostname                                                  # pjurdanaSW
-ip a show $(ip route | grep default | awk '{print $5}')   # inet 192.168.56.111/24
-systemctl status k3s-agent --no-pager                     # active (running)
+ip a                                                      # enp0s8 : inet 192.168.56.111/24
+systemctl status k3s-agent --no-pager                     # active (running) -> mode agent
 exit
 cd ..
 ```
@@ -207,9 +220,9 @@ démarrage, puis K3s le relance).
 
 ```bash
 cd p2
-vagrant ssh pjurdanaS
+vagrant ssh pjurdanaS                                     # aucun mot de passe demandé
 hostname                                                  # pjurdanaS
-ip a show $(ip route | grep default | awk '{print $5}')   # inet 192.168.56.110/24
+ip a                                                      # enp0s8 : inet 192.168.56.110/24
 systemctl status k3s --no-pager                           # active (running)
 kubectl get nodes -o wide                                 # 1 node pjurdanas, control-plane, 192.168.56.110
 kubectl get all
