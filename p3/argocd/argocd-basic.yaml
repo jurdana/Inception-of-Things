@@ -7,7 +7,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/zomioz/Inception-Of-Things
+    repoURL: https://github.com/jurdana/Inception-of-Things
     targetRevision: project
     path: deployment
 
