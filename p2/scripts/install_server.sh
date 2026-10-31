@@ -54,7 +54,7 @@ done
 # Disable firewalld if present: it blocks K3s ports and the ingress (80/tcp)
 systemctl disable --now firewalld 2>/dev/null || true
 
-# Same cache logic as p1/scripts/server.sh: files from prepare_host.sh,
+# Same cache logic as p1/scripts/server.sh: files pre-downloaded on the host,
 # else online installer
 K3S_CACHE=/tmp/k3s-cache
 if [[ -f "${K3S_CACHE}/k3s" ]]; then
