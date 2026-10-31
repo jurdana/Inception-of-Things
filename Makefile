@@ -7,16 +7,13 @@ P1_WORKER = pjurdanaSW
 
 P2_SERVER = pjurdanaS
 
-P3_NAME = p3-cluster
-SCRIPTS_PATH = ./p3/scripts
-
 NET_CIDR  = 192.168.56.0/24
 NFT_TABLE = iot_nat
 
 .PHONY: net net-clean \
 		p1 p1-status p1-clean \
 		p2 p2-up p2-status p2-clean p2-hosts \
-		p3-install p3-clean
+		p3-install p3-clean p3-pass
 
 
 # Host routes the private network (192.168.56.0/24) to the internet:
@@ -99,3 +96,6 @@ p3-install:
 p3-clean:
 	./p3/scripts/script_uninstall.sh
 
+# Argo CD admin password (login: admin), read from the cluster
+p3-pass:
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
