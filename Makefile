@@ -16,7 +16,7 @@ NFT_TABLE = iot_nat
 .PHONY: net net-clean \
 		p1 p1-status p1-clean \
 		p2 p2-up p2-status p2-clean p2-hosts \
-		p3-install p3-setup p3-clean p3-fclean p3-pass
+		p3-install p3-clean
 
 
 # Host routes the private network (192.168.56.0/24) to the internet:
@@ -94,22 +94,8 @@ p2-clean:
 
 
 p3-install:
-	@chmod +x $(SCRIPTS_PATH)/tools.sh
-	@bash $(SCRIPTS_PATH)/tools.sh
-
-p3-setup:
-	@chmod +x $(SCRIPTS_PATH)/setup.sh
-	@bash $(SCRIPTS_PATH)/setup.sh
+	./p3/scripts/script_install.sh
 
 p3-clean:
-	@chmod +x $(SCRIPTS_PATH)/clean.sh
-	@bash $(SCRIPTS_PATH)/clean.sh
+	./p3/scripts/script_uninstall.sh
 
-p3-fclean: p3-clean
-	@chmod +x $(SCRIPTS_PATH)/total_uninstall.sh
-	@bash $(SCRIPTS_PATH)/total_uninstall.sh
-
-
-p3-pass:
-	@echo "The admin pass for argoCD is:"
-	kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
