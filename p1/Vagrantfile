@@ -33,7 +33,7 @@ File.write(token_file, SecureRandom.hex(32)) unless File.exist?(token_file)
 K3S_TOKEN = File.read(token_file).strip
 
 # --- K3s cache ---------------------------------------------------------------
-# K3s binary, installer and airgap images downloaded once by prepare_host.sh
+# K3s binary, installer and airgap images pre-downloaded on the host (optional)
 K3S_CACHE = File.expand_path("~/.cache/iot/k3s")
 
 # Vagrant configuration, format version 2 (current format)
