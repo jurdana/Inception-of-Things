@@ -8,16 +8,16 @@ vagrant --version && VBoxManage --version  # outils presents
 VBoxManage list vms                        # aucune VM pjurdanaS / pjurdanaSW qui traine
                                            # sinon : make p1-clean / make p2-clean
 # Fedora 45 est-elle sortie ? Si oui, mettre a jour BOX_URL partout
-# (p1/Vagrantfile, p2/Vagrantfile, prepare_host.sh)
+# (p1/Vagrantfile, p2/Vagrantfile, ~/iot-prepare.sh)
 curl -sI https://dl.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/ | head -1
 
 1. Preparation (une seule fois)
 -------------------------------
-make prepare
+bash ~/iot-prepare.sh
 # attendu : box fedora44 ajoutee + "K3s v1.xx.y+k3s1 cached in ~/.cache/iot/k3s"
 vagrant box list                           # fedora44 (virtualbox, 0)
 ls -lh ~/.cache/iot/k3s                    # k3s, k3s-airgap-images-amd64.tar.zst, install.sh, version
-make prepare                               # 2e lancement : doit tout sauter ("already")
+bash ~/iot-prepare.sh                               # 2e lancement : doit tout sauter ("already")
 
 2. P1
 -----
