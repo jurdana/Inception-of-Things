@@ -46,7 +46,8 @@ sudo apt-get autoremove -y
 
 # __________________Uninstall k3d
 echo "Removing k3d..."
-sudo rm /usr/bin/k3d || true
+# The official installer puts k3d in /usr/local/bin
+sudo rm -f /usr/local/bin/k3d /usr/bin/k3d
 
 
 # __________________Delete password file
