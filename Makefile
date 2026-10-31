@@ -13,14 +13,11 @@ SCRIPTS_PATH = ./p3/scripts
 NET_CIDR  = 192.168.56.0/24
 NFT_TABLE = iot_nat
 
-.PHONY: prepare net net-clean \
+.PHONY: net net-clean \
 		p1 p1-status p1-clean \
 		p2 p2-up p2-status p2-clean p2-hosts \
 		p3-install p3-setup p3-clean p3-fclean p3-pass
 
-# One-time download of the Fedora box and K3s files, kept across p1/p2 clean
-prepare:
-	bash prepare_host.sh
 
 # Host routes the private network (192.168.56.0/24) to the internet:
 # VMs use 192.168.56.1 (this host) as default gateway.
