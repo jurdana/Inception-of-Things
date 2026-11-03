@@ -13,7 +13,8 @@ NFT_TABLE = iot_nat
 .PHONY: net net-clean \
 		p1 p1-status p1-clean \
 		p2 p2-up p2-status p2-clean p2-hosts \
-		p3-install p3-clean p3-pass
+		p3-install p3-clean p3-pass \
+		bonus-install bonus-clean bonus-pass
 
 
 # Host routes the private network (192.168.56.0/24) to the internet:
@@ -99,3 +100,16 @@ p3-clean:
 # Argo CD admin password (login: admin), read from the cluster
 p3-pass:
 	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+# ______________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+# Requires p3 (make p3-install); run bonus-clean before p3-clean
+bonus-install:
+	./bonus/scripts/script_install.sh
+
+bonus-clean:
+	./bonus/scripts/script_uninstall.sh
+
+# GitLab root password (login: root), read from the cluster
+bonus-pass:
+	@kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -o jsonpath="{.data.password}" | base64 -d; echo
