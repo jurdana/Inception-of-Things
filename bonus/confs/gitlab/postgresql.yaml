@@ -42,6 +42,9 @@ spec:
       containers:
       - name: postgresql
         image: postgres:17
+        # GitLab loads its whole schema in one transaction: the default (64)
+        # fails with "out of shared memory"
+        args: ["-c", "max_locks_per_transaction=256"]
         ports:
         - containerPort: 5432
         env:
@@ -72,4 +75,4 @@ spec:
       storageClassName: local-path
       resources:
         requests:
-          storage: 5Gi
+          storage: 1Gi

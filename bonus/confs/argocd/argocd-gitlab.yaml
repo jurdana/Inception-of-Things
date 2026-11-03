@@ -1,0 +1,27 @@
+# Same Application name as p3 (argocd-basic.yaml): applying it replaces the
+# GitHub source with the local GitLab, so only one Application manages `dev`.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    # In-cluster URL: Argo CD cannot resolve gitlab.local (only in the host /etc/hosts)
+    repoURL: http://gitlab-webservice-default.gitlab.svc:8181/root/pjurdana-iot.git
+    targetRevision: main
+    path: deployment
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+
+    automated:
+      selfHeal: true
+      prune: true
