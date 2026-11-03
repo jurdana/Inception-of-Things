@@ -1,0 +1,59 @@
+# Minimal values for the GitLab chart 10.5.4 (GitLab v19.5.3).
+# PostgreSQL and Redis are external: see postgresql.yaml and redis.yaml.
+global:
+  edition: ce
+  hosts:
+    domain: local
+    https: false
+    gitlab: {name: gitlab.local}
+  psql:
+    host: gitlab-postgresql.gitlab.svc
+    database: gitlabhq_production
+    username: gitlab
+    password: {secret: gitlab-postgresql, key: password}
+  redis:
+    host: gitlab-redis.gitlab.svc
+    auth: {enabled: true, secret: gitlab-redis, key: password}
+  gatewayApi: {enabled: false, installEnvoy: false}
+  ingress: {enabled: false}
+  appConfig:
+    artifacts: {enabled: false}
+    lfs: {enabled: false}
+    uploads: {enabled: false}
+    packages: {enabled: false}
+  registry: {enabled: false}
+  praefect: {enabled: false}
+  kas: {enabled: false}
+  pages: {enabled: false}
+installCertmanager: false
+certmanager-issuer: {email: admin@gitlab.local}
+nginx-ingress: {enabled: false}
+registry: {enabled: false}
+gitlab-runner: {install: false}
+prometheus: {install: false}
+gitlab:
+  gitlab-shell: {enabled: false}
+  gitlab-exporter: {enabled: false}
+  gitaly:
+    persistence: {storageClass: local-path, size: 2Gi}
+    resources:
+      requests: {cpu: 100m, memory: 200Mi}
+  webservice:
+    minReplicas: 1
+    maxReplicas: 1
+    workerProcesses: 1
+    resources:
+      requests: {cpu: 300m, memory: 1.5G}
+      limits: {memory: 2.5G}
+  sidekiq:
+    minReplicas: 1
+    maxReplicas: 1
+    resources:
+      requests: {cpu: 200m, memory: 800M}
+      limits: {memory: 1.5G}
+  toolbox:
+    backups:
+      objectStorage:
+        config: {secret: gitlab-toolbox-backup, key: config}
+    resources:
+      requests: {cpu: 50m, memory: 350M}

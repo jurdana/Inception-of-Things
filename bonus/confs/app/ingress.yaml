@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wil42-ingress
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls: "false"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: wil42.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: wil42-service
+            port:
+              number: 8888

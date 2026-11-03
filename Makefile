@@ -103,7 +103,7 @@ p3-pass:
 
 # ______________________________________________________________________________________________________________________________________________________________________________________________________________________
 
-# Bonus: local GitLab on top of the P3 cluster (run make p3-install first)
+# Bonus: local GitLab on top of the P3 cluster (run make p3-install first); run bonus-clean before p3-clean
 bonus-install:
 	./bonus/scripts/script_install.sh
 

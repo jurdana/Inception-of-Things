@@ -1,0 +1,78 @@
+# PostgreSQL for GitLab (chart 10.x no longer bundles it).
+# Names must match global.psql in gitlab-values.yaml:
+#   host gitlab-postgresql.gitlab.svc, secret gitlab-postgresql / key password
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-postgresql
+  namespace: gitlab
+type: Opaque
+stringData:
+  password: "1234"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-postgresql
+  namespace: gitlab
+spec:
+  selector:
+    app: gitlab-postgresql
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gitlab-postgresql
+  namespace: gitlab
+spec:
+  serviceName: gitlab-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitlab-postgresql
+  template:
+    metadata:
+      labels:
+        app: gitlab-postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:17
+        # GitLab loads its whole schema in one transaction: the default (64)
+        # fails with "out of shared memory"
+        args: ["-c", "max_locks_per_transaction=256"]
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: gitlabhq_production
+        - name: POSTGRES_USER
+          value: gitlab
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitlab-postgresql
+              key: password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "gitlab", "-d", "gitlabhq_production"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 1Gi
