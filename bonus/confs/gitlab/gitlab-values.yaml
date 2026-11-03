@@ -15,9 +15,7 @@ global:
     host: gitlab-redis.gitlab.svc
     auth: {enabled: true, secret: gitlab-redis, key: password}
   gatewayApi: {enabled: false, installEnvoy: false}
-  # Traefik routes gitlab.local through gitlab-ingress.yaml
   ingress: {enabled: false}
-  # No S3 server: these features need object storage, so they are disabled
   appConfig:
     artifacts: {enabled: false}
     lfs: {enabled: false}
