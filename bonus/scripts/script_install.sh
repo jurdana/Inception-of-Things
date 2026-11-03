@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Stop at the first failing command instead of looping on a broken install
+set -e
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BONUS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -26,6 +29,8 @@ done
 
 
 #__Installation of gitlab
+helm repo add gitlab https://charts.gitlab.io/
+helm repo update
 kubectl apply -f "${BONUS_DIR}/confs/gitlab/toolbox-backup-secret.yaml"
 helm upgrade --install gitlab gitlab/gitlab -n gitlab --version 10.5.4 --timeout 20m -f "${BONUS_DIR}/confs/gitlab/gitlab-values.yaml"
 kubectl apply -f "${BONUS_DIR}/confs/gitlab/gitlab-ingress.yaml"
@@ -59,7 +64,7 @@ curl -s -o /dev/null -X POST -H "PRIVATE-TOKEN: ${TOKEN}" \
 if curl -sf -H "PRIVATE-TOKEN: ${TOKEN}" "${GITLAB_URL}/api/v4/projects/root%2F${PROJECT}/repository/tree?path=deployment" | grep -q deploy.yaml; then
     echo "[+] ${PROJECT} already contains the app, push skipped"
 else
-    TMP_REPO="$(+ -d)"
+    TMP_REPO="$(mktemp -d)"
     mkdir "${TMP_REPO}/deployment"
     cp "${BONUS_DIR}"/confs/app/*.yaml "${TMP_REPO}/deployment/"
     (
