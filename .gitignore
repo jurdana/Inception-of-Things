@@ -24,9 +24,12 @@ test_*.sh
 
 iot-correction.pdf
 iot-subject.pdf
+fr.subject.pdf
 
 # Argo CD admin password written by p3/scripts/script_install.sh
 p3/argocd/Password
 
 # GitLab root password written by bonus/scripts/script_install.sh
 bonus/confs/gitlab/Password
+
+bonus/.env
