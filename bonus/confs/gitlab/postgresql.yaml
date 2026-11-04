@@ -2,15 +2,6 @@
 # Names must match global.psql in gitlab-values.yaml:
 #   host gitlab-postgresql.gitlab.svc, secret gitlab-postgresql / key password
 apiVersion: v1
-kind: Secret
-metadata:
-  name: gitlab-postgresql
-  namespace: gitlab
-type: Opaque
-stringData:
-  password: "1234"
----
-apiVersion: v1
 kind: Service
 metadata:
   name: gitlab-postgresql
