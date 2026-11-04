@@ -20,6 +20,27 @@ helm version
 #___Creation of namespace for Redis and Postresql Installation
 # create | apply keeps the script re-runnable when the namespace already exists
 kubectl create namespace gitlab --dry-run=client -o yaml | kubectl apply -f -
+
+#__Passwords for PostgreSQL / Redis, read from bonus/.env (not committed)
+ENV_FILE="${BONUS_DIR}/.env"
+# Fresh clone: no .env yet, create it from .env.example with random passwords
+if [ ! -f "${ENV_FILE}" ]; then
+    echo "[+] ${ENV_FILE} missing: generating it with random passwords"
+    ( umask 077
+      sed -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 16)/" \
+          -e "s/^REDIS_PASSWORD=.*/REDIS_PASSWORD=$(openssl rand -hex 16)/" \
+          "${BONUS_DIR}/.env.example" > "${ENV_FILE}" )
+fi
+set -a; . "${ENV_FILE}"; set +a
+: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is empty in ${ENV_FILE}}"
+: "${REDIS_PASSWORD:?REDIS_PASSWORD is empty in ${ENV_FILE}}"
+
+# dry-run | apply: re-runnable, updates the secret if it already exists
+kubectl -n gitlab create secret generic gitlab-postgresql \
+    --from-literal=password="${POSTGRES_PASSWORD}" --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n gitlab create secret generic gitlab-redis \
+    --from-literal=password="${REDIS_PASSWORD}" --dry-run=client -o yaml | kubectl apply -f -
+
 kubectl apply -f "${BONUS_DIR}/confs/gitlab/postgresql.yaml"
 kubectl apply -f "${BONUS_DIR}/confs/gitlab/redis.yaml"
 for app in gitlab-postgresql gitlab-redis; do
