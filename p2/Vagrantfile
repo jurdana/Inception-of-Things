@@ -1,9 +1,9 @@
 # --- Box ---------------------------------------------------------------------
 # Same box as p1: Vagrant reuses the cached copy, so no second download
-BOX_NAME = "fedora44"
-# Official Fedora 44 Cloud Base VirtualBox box, published on the Fedora mirror itself
+BOX_NAME = "fedora45"
+# Official Fedora 45 Cloud Base VirtualBox box, published on the Fedora mirror itself
 # (not on the HashiCorp registry). Check for a newer release before each defense.
-BOX_URL  = "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-44-1.7.x86_64.vagrant.virtualbox.box"
+BOX_URL  = "https://dl.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-45-1.4.x86_64.vagrant.virtualbox.box"
 
 # --- Machine -----------------------------------------------------------------
 # Name imposed by the subject: <login>S

@@ -3,11 +3,11 @@ require "securerandom"   # cryptographically secure random generator
 require "fileutils"      # filesystem helpers (mkdir -p equivalent)
 
 # --- Box ---------------------------------------------------------------------
-# Local name under which Vagrant caches the box (~/.vagrant.d/boxes/fedora44)
-BOX_NAME = "fedora44"
-# Official Fedora 44 Cloud Base VirtualBox box, published on the Fedora mirror itself
+# Local name under which Vagrant caches the box (~/.vagrant.d/boxes/fedora45)
+BOX_NAME = "fedora45"
+# Official Fedora 45 Cloud Base VirtualBox box, published on the Fedora mirror itself
 # (not on the HashiCorp registry). Check for a newer release before each defense.
-BOX_URL  = "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-44-1.7.x86_64.vagrant.virtualbox.box"
+BOX_URL  = "https://dl.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-45-1.4.x86_64.vagrant.virtualbox.box"
 
 # --- Machines ----------------------------------------------------------------
 # Names imposed by the subject: <login>S for the server, <login>SW for the worker

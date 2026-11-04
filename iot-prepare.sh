@@ -2,7 +2,7 @@
 # One-time host preparation, to run once before building p1/p2.
 # Downloads everything that survives `make p1-clean` / `make p2-clean`, so that
 # `vagrant up` does not fetch it again on every build:
-#   - the Fedora 44 Vagrant box (Vagrant box cache, ~/.vagrant.d/boxes)
+#   - the Fedora 45 Vagrant box (Vagrant box cache, ~/.vagrant.d/boxes)
 #   - the K3s binary, installer and airgap images (~/.cache/iot/k3s), uploaded
 #     into the VMs by the Vagrantfiles instead of being downloaded by each VM
 # Both live outside the repository, so they are kept across `git clone`.
@@ -12,15 +12,15 @@
 set -euo pipefail
 
 # Same box as p1/Vagrantfile and p2/Vagrantfile
-BOX_NAME="fedora44"
-BOX_URL="https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-44-1.7.x86_64.vagrant.virtualbox.box"
+BOX_NAME="fedora45"
+BOX_URL="https://dl.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-45-1.4.x86_64.vagrant.virtualbox.box"
 
 # Same path as K3S_CACHE in the Vagrantfiles
 CACHE_DIR="${HOME}/.cache/iot/k3s"
 ARCH="amd64"
 
 # --- Vagrant box -------------------------------------------------------------
-# `vagrant box list` prints "fedora44 (virtualbox, 0)"
+# `vagrant box list` prints "fedora45 (virtualbox, 0)"
 if vagrant box list | grep -q "^${BOX_NAME} "; then
     echo "[+] Box ${BOX_NAME} already present"
 else
